@@ -26,7 +26,9 @@
 (package! ascii-art-to-unicode)
 (package! wakatime-mode)
 (package! pretty-hydra)
-(package! git-messenger)
+(package! slack)
+(package! exwm)
+(package! blamer)
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
@@ -74,3 +76,6 @@
 ;;;(package! gitignore-mode
 ;;;	  :recipe (:host github :repo "magit/git-modes"
 ;;;			 :files ("gitignore-mode.el")))
+
+(package! copilot
+  :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))

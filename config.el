@@ -25,7 +25,7 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-one)
+(setq doom-theme 'doom-dark+)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
@@ -33,7 +33,7 @@
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type t)
+(setq display-line-numbers-type 'relative)
 
 (setq vterm-module-cmake-args "-DUSE_SYSTEM_LIBVTERM=no")
 
@@ -54,18 +54,18 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
 
-(add-to-list 'default-frame-alist
-             '(ns-transparent-titlebar . t))
-(add-to-list 'default-frame-alist
-             '(ns-appearance . light))
+;;(add-to-list 'default-frame-alist
+;;             '(ns-transparent-titlebar . t))
+;;(add-to-list 'default-frame-alist
+;;             '(ns-appearance . light))
 
 (global-auto-revert-mode t)
 
-(add-hook! 'org-mode-hook #'+org-pretty-mode #'mixed-pitch-mode)
+;; (add-hook! 'org-mode-hook #'+org-pretty-mode #'mixed-pitch-mode)
 
 
-(add-hook! 'org-mode-hook (company-mode -1))
-(add-hook! 'org-capture-mode-hook (company-mode -1))
+;; (add-hook! 'org-mode-hook (company-mode -1))
+;; (add-hook! 'org-capture-mode-hook (company-mode -1))
 
 (setq baby-blue '("#d2ecff" "#d2ecff" "brightblue"))
 
@@ -247,7 +247,7 @@
 
 
 ;; {{ git-gutter
-(local-require 'git-gutter)
+;;(local-require 'git-gutter)
 
 (defun git-gutter-reset-to-head-parent()
   "Reset  gutter to HEAD^.  Support Subversion and Git."
@@ -627,74 +627,44 @@ If nothing is selected, use the word under cursor as function name to look up."
        "tuna" :toggle (eq centaur-package-archives 'tuna))))))
 
 
+  ;; Trigger a refresh of vc-modeline  on some magit functions
+  (with-eval-after-load 'magit
+   (defun refresh-vc-state () '(progn (vc-refresh-state)))
+   (advice-add 'magit-checkout :after #'refresh-vc-state)
+   (advice-add 'magit-branch-create :after #'refresh-vc-state)
+   (advice-add 'magit-branch-and-checkout :after #'refresh-vc-state)
+   (advice-add 'magit-branch-or-checkout :after #'refresh-vc-state))
 
-;; Pop up last commit information of current line ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(use-package! git-messenger
-  :ensure t
-  :bind (:map vc-prefix-map
-         ("p" . git-messenger:popup-message)
-         :map git-messenger-map
-         ("m" . git-messenger:copy-message))
-  :pretty-hydra
-  ((:title (pretty-hydra-title "Git Messenger" 'alltheicon "git")
-    :color blue :quit-key "q")
-   ("Actions"
-    (("s" git-messenger:popup-show "Show")
-     ;; ("S" git-messenger:popup-show-verbose "Show verbose")
-     ("c" git-messenger:copy-commit-id "Copy hash")
-     ;; ("d" git-messenger:popup-diff "Diff")
-     ("m" git-messenger:copy-message "Copy message")
-     ("," (catch 'git-messenger-loop (git-messenger:show-parent)) "Go Parent"))))
-  :init
-  (setq git-messenger:show-detail t
-        git-messenger:use-magit-popup t)
 
-  (with-no-warnings
-    (defun my-git-messenger:popup-message ()
-      "Popup message with `posframe', `pos-tip', `lv' or `message', and dispatch actions with `hydra'."
-      (interactive)
-      (let* ((vcs (git-messenger:find-vcs))
-             (file (buffer-file-name (buffer-base-buffer)))
-             (line (line-number-at-pos))
-             (commit-info (git-messenger:commit-info-at-line vcs file line))
-             (commit-id (car commit-info))
-             (author (cdr commit-info))
-             (msg (git-messenger:commit-message vcs commit-id))
-             (popuped-message (if (git-messenger:show-detail-p commit-id)
-                                  (git-messenger:format-detail vcs commit-id author msg)
-                                (cl-case vcs
-                                  (git msg)
-                                  (svn (if (string= commit-id "-")
-                                           msg
-                                         (git-messenger:svn-message msg)))
-                                  (hg msg)))))
-        (setq git-messenger:vcs vcs
-              git-messenger:last-message popuped-message
-              git-messenger:last-commit-id commit-id)
-        (run-hook-with-args 'git-messenger:before-popup-hook popuped-message)
-        (git-messenger-hydra/body)
-        (cond ((posframe-workable-p)
-               (let ((buffer-name "*git-messenger*"))
-                 (with-current-buffer (get-buffer-create buffer-name)
-                   (let ((inhibit-read-only t)
-                         (markdown-enable-math nil))
-                     (erase-buffer)
-                     (markdown-mode)
-                     (flycheck-mode -1)
-                     (insert popuped-message)))
-                 (posframe-show buffer-name
-                                :internal-border-width 8
-                                :font centaur-childframe-font)
-                 (unwind-protect
-                     (push (read-event) unread-command-events)
-                   (posframe-delete buffer-name))))
-              ((fboundp 'pos-tip-show) (pos-tip-show popuped-message))
-              ((fboundp 'lv-message)
-               (lv-message popuped-message)
-               (unwind-protect
-                   (push (read-event) unread-command-events)
-                 (lv-delete-window)))
-              (t (message "%s" popuped-message)))
-        (run-hook-with-args 'git-messenger:after-popup-hook popuped-message)))
-    (advice-add #'git-messenger:popup-close :override #'ignore)
-    (advice-add #'git-messenger:popup-message :override #'my-git-messenger:popup-message)))
+; accept completion from copilot and fallback to company
+(use-package! copilot
+  :hook (prog-mode . copilot-mode)
+  :bind (("C-TAB" . 'copilot-accept-completion-by-word)
+         ("C-<tab>" . 'copilot-accept-completion-by-word)
+         :map copilot-completion-map
+         ("<tab>" . 'copilot-accept-completion)
+         ("TAB" . 'copilot-accept-completion)))
+
+; Magit Blamer
+(use-package blamer
+  :bind (("s-i" . blamer-show-commit-info))
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 70)
+  :custom-face
+  (blamer-face ((t :foreground "#7a88cf"
+                    :background nil
+                    :height 140
+                    :italic t)))
+  :config
+  (global-blamer-mode 1))
+
+; Magit force update
+(defun +cwejman-vc-refresh-modelines (a)
+  (dolist (buffer (doom-buffer-list))
+    (set-buffer buffer)
+    (vc-refresh-state)
+    (+doom-modeline--update-vcs)))
+
+(advice-add 'magit-checkout :after #'+cwejman-vc-refresh-modelines)
