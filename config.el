@@ -25,7 +25,34 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-dark+)
+(setq doom-theme 'doom-dark+
+      display-line-numbers-type 'relative
+      +format-on-save-enabled-modes '(c++-mode python-mode c-mode latex-mode rust-mode)
+      projectile-enable-caching (not (executable-find doom-projectile-fd-binary)))
+
+(setq lsp-clients-clangd-args '("-j=3"
+                                "--background-index"
+                                "--clang-tidy"
+                                "--completion-style=detailed"
+                                "--suggest-missing-includes"
+                                "--header-insertion=never"))
+
+(add-hook! 'prog-mode-hook
+           #'rainbow-delimiters-mode
+           #'evil-quickscope-always-mode)
+
+(after! tex
+  (setq +latex-viewers '(pdf-tools zathura))
+  (setq-default TeX-master nil)
+  (require 'doc-view))
+
+(setq-hook! 'python-mode-hook +format-with-lsp nil)
+
+(after! rainbow-delimiters
+  (setq rainbow-delimiters-max-face-count 9))
+
+(autoload 'dired-async-mode "dired-async.el" nil t)
+(dired-async-mode 1)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
@@ -70,46 +97,46 @@
 (setq baby-blue '("#d2ecff" "#d2ecff" "brightblue"))
 
 (setq
-    default-directory "~"
-    dart-format-on-save t
-    web-mode-markup-indent-offset 2
-    web-mode-code-indent-offset 2
-    web-mode-css-indent-offset 2
-    mac-command-modifier 'meta
-    js-indent-level 2
-    typescript-indent-level 2
-    json-reformat:indent-width 2
-    prettier-js-args '("--single-quote")
-    projectile-project-search-path '("~/Projects/muzzley" "~/Projects/opensource")
-    dired-dwim-target t
-    org-ellipsis " ▾ "
-    org-bullets-bullet-list '("·")
-    org-tags-column -80
-    org-agenda-files (ignore-errors (directory-files +org-dir t "\\.org$" t))
-    org-log-done 'time
-    css-indent-offset 2
-    org-refile-targets (quote ((nil :maxlevel . 1)))
-    org-capture-templates '(("x" "Note" entry
-                        (file+olp+datetree "journal.org")
-                        "**** [ ] %U %?" :prepend t :kill-buffer t)
-                            ("t" "Task" entry
-                             (file+headline "tasks.org" "Inbox")
-                             "* [ ] %?\n%i" :prepend t :kill-buffer t))
-    +doom-dashboard-banner-file (expand-file-name "logo.png" doom-private-dir)
-    +org-capture-todo-file "tasks.org"
-    org-super-agenda-groups '((:name "Today"
-                               :time-grid t
-                               :scheduled today)
-                              (:name "Due today"
-                               :deadline today)
-                              (:name "Important"
-                               :priority "A")
-                              (:name "Overdue"
-                               :deadline past)
-                              (:name "Due soon"
-                               :deadline future)
-                              (:name "Big Outcomes"
-                               :tag "bo")))
+ default-directory "~"
+ dart-format-on-save t
+ web-mode-markup-indent-offset 2
+ web-mode-code-indent-offset 2
+ web-mode-css-indent-offset 2
+ mac-command-modifier 'meta
+ js-indent-level 2
+ typescript-indent-level 2
+ json-reformat:indent-width 2
+ prettier-js-args '("--single-quote")
+ projectile-project-search-path '("~/Projects/muzzley" "~/Projects/opensource")
+ dired-dwim-target t
+ org-ellipsis " ▾ "
+ org-bullets-bullet-list '("·")
+ org-tags-column -80
+ org-agenda-files (ignore-errors (directory-files +org-dir t "\\.org$" t))
+ org-log-done 'time
+ css-indent-offset 2
+ org-refile-targets (quote ((nil :maxlevel . 1)))
+ org-capture-templates '(("x" "Note" entry
+                          (file+olp+datetree "journal.org")
+                          "**** [ ] %U %?" :prepend t :kill-buffer t)
+                         ("t" "Task" entry
+                          (file+headline "tasks.org" "Inbox")
+                          "* [ ] %?\n%i" :prepend t :kill-buffer t))
+ +doom-dashboard-banner-file (expand-file-name "logo.png" doom-private-dir)
+ +org-capture-todo-file "tasks.org"
+ org-super-agenda-groups '((:name "Today"
+                            :time-grid t
+                            :scheduled today)
+                           (:name "Due today"
+                            :deadline today)
+                           (:name "Important"
+                            :priority "A")
+                           (:name "Overdue"
+                            :deadline past)
+                           (:name "Due soon"
+                            :deadline future)
+                           (:name "Big Outcomes"
+                            :tag "bo")))
 
 (venv-initialize-interactive-shells) ;; if you want interactive shell support
 (venv-initialize-eshell) ;; if you want eshell support
@@ -122,8 +149,8 @@
   (add-hook 'before-save-hook #'refmt-before-save nil t))
 
 (add-hook!
-  js2-mode 'prettier-js-mode
-  (add-hook 'before-save-hook #'refmt-before-save nil t))
+ js2-mode 'prettier-js-mode
+ (add-hook 'before-save-hook #'refmt-before-save nil t))
 
 (map! :ne "M-/" #'comment-or-uncomment-region)
 (map! :ne "SPC / r" #'deadgrep)
@@ -301,9 +328,9 @@
 (custom-set-variables '(git-gutter:handled-backends '(svn hg git)))
 
 (unless (fboundp 'global-display-line-numbers-mode)
- ;; git-gutter's workaround for linum-mode bug.
- ;; should not be used in `display-line-number-mode`
- (git-gutter:linum-setup))
+  ;; git-gutter's workaround for linum-mode bug.
+  ;; should not be used in `display-line-number-mode`
+  (git-gutter:linum-setup))
 
 (global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
 (global-set-key (kbd "C-x v =") 'git-gutter:popup-hunk)
@@ -318,9 +345,9 @@
   "Show last (current) revision of file."
   (interactive)
   (let* ((collection (mapcar (lambda (rev)
-                    ;; re-shape list for the ivy-read
-                    (cons (concat (substring-no-properties (nth 0 rev) 0 7) "|" (nth 5 rev) "|" (nth 6 rev)) rev))
-                  (git-timemachine--revisions))))
+                               ;; re-shape list for the ivy-read
+                               (cons (concat (substring-no-properties (nth 0 rev) 0 7) "|" (nth 5 rev) "|" (nth 6 rev)) rev))
+                             (git-timemachine--revisions))))
     (ivy-read "commits:"
               collection
               :action (lambda (rev)
@@ -472,7 +499,7 @@ If nothing is selected, use the word under cursor as function name to look up."
 
 (eval-after-load 'magit
   '(progn
-    (ivy-mode 1)))
+     (ivy-mode 1)))
 
 (eval-after-load 'vc-msg-git
   '(progn
@@ -627,16 +654,16 @@ If nothing is selected, use the word under cursor as function name to look up."
        "tuna" :toggle (eq centaur-package-archives 'tuna))))))
 
 
-  ;; Trigger a refresh of vc-modeline  on some magit functions
-  (with-eval-after-load 'magit
-   (defun refresh-vc-state () '(progn (vc-refresh-state)))
-   (advice-add 'magit-checkout :after #'refresh-vc-state)
-   (advice-add 'magit-branch-create :after #'refresh-vc-state)
-   (advice-add 'magit-branch-and-checkout :after #'refresh-vc-state)
-   (advice-add 'magit-branch-or-checkout :after #'refresh-vc-state))
+;; Trigger a refresh of vc-modeline  on some magit functions
+(with-eval-after-load 'magit
+  (defun refresh-vc-state () '(progn (vc-refresh-state)))
+  (advice-add 'magit-checkout :after #'refresh-vc-state)
+  (advice-add 'magit-branch-create :after #'refresh-vc-state)
+  (advice-add 'magit-branch-and-checkout :after #'refresh-vc-state)
+  (advice-add 'magit-branch-or-checkout :after #'refresh-vc-state))
 
 
-; accept completion from copilot and fallback to company
+                                        ; accept completion from copilot and fallback to company
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
   :bind (("C-TAB" . 'copilot-accept-completion-by-word)
@@ -645,7 +672,7 @@ If nothing is selected, use the word under cursor as function name to look up."
          ("<tab>" . 'copilot-accept-completion)
          ("TAB" . 'copilot-accept-completion)))
 
-; Magit Blamer
+                                        ; Magit Blamer
 (use-package blamer
   :bind (("s-i" . blamer-show-commit-info))
   :defer 20
@@ -654,13 +681,13 @@ If nothing is selected, use the word under cursor as function name to look up."
   (blamer-min-offset 70)
   :custom-face
   (blamer-face ((t :foreground "#7a88cf"
-                    :background nil
-                    :height 140
-                    :italic t)))
+                   :background nil
+                   :height 140
+                   :italic t)))
   :config
   (global-blamer-mode 1))
 
-; Magit force update
+                                        ; Magit force update
 (defun +cwejman-vc-refresh-modelines (a)
   (dolist (buffer (doom-buffer-list))
     (set-buffer buffer)
@@ -668,3 +695,92 @@ If nothing is selected, use the word under cursor as function name to look up."
     (+doom-modeline--update-vcs)))
 
 (advice-add 'magit-checkout :after #'+cwejman-vc-refresh-modelines)
+
+(after! dap-mode
+  (setq dap-python-executable "python3"
+        dap-python-debugger 'debugpy
+        dap-auto-configure-features '(breakpoints expressions controls tooltip repl locals)
+        dap-ui-buffer-configurations '(("*dap-ui-locals*" (side . right) (slot . 1) (window-width . 0.3))
+                                       ("*dap-ui-expressions*" (side . right) (slot . 2) (window-width . 0.3))
+                                       ("*dap-ui-sessions*" (side . right) (slot . 3) (window-width . 0.3))
+                                       ("*dap-ui-breakpoints*" (side . left) (slot . 2) (window-width . 35))
+                                       ("*debug-window*" (side . bottom) (slot . 3) (window-width . 0.2))
+                                       ("*dap-ui-repl*" (side . bottom) (slot . 1) (window-height . 0.45))))
+  (map! :map dap-mode-map
+        :leader
+        :prefix ("d" . "dap")
+        ;; basics
+        :desc "dap next"          "n" #'dap-next
+        :desc "dap step in"       "i" #'dap-step-in
+        :desc "dap step out"      "o" #'dap-step-out
+        :desc "dap continue"      "c" #'dap-continue
+        :desc "dap hydra"         "h" #'dap-hydra
+        :desc "dap debug restart" "r" #'dap-debug-restart
+        :desc "dap debug"         "s" #'dap-debug
+
+        ;; debug
+        :prefix ("dd" . "Debug")
+        :desc "dap debug recent"  "r" #'dap-debug-recent
+        :desc "dap debug last"    "l" #'dap-debug-last
+
+        ;; eval
+        :prefix ("de" . "Eval")
+        :desc "eval"                "e" #'dap-eval
+        :desc "eval region"         "r" #'dap-eval-region
+        :desc "eval thing at point" "s" #'dap-eval-thing-at-point
+        :desc "add expression"      "a" #'dap-ui-expressions-add
+        :desc "remove expression"   "d" #'dap-ui-expressions-remove
+
+        :prefix ("db" . "Breakpoint")
+        :desc "dap breakpoint toggle"      "b" #'dap-breakpoint-toggle
+        :desc "dap breakpoint condition"   "c" #'dap-breakpoint-condition
+        :desc "dap breakpoint hit count"   "h" #'dap-breakpoint-hit-condition
+        :desc "dap breakpoint log message" "l" #'dap-breakpoint-log-message))
+
+(defun r0fl/python-args-to-docstring (&optional arguments)
+  "return docstring format for the python arguments in yas-text or in ARGUMENTS"
+  (let* ((indent  "\n" )
+         (args (if arguments
+                   (python-split-args arguments)
+                 (python-split-args yas-text)))
+         (formatted-args (mapconcat
+                          (lambda (x)
+                            (let ((arg (nth 0 x)))
+                              (concat arg (if (string-match-p ":" arg) "\n" " :\n")))) args indent)))
+    (unless (string= formatted-args "")
+      (mapconcat 'identity (list "Parameter\n---------" formatted-args) indent))))
+
+(defun r0fl/python-return-to-docstring (&optional type)
+  "Return docstring format for the python return type in yas-text or in TYPE"
+  (let ((type-intern (or type yas-text)))
+    (when (not (equal "None" type-intern))
+      (concat "Return\n------\n" type-intern " :\n"))))
+
+(defun r0fl/py-args-to-doc (beg end)
+  "Convert python arguments between BEG and END to docstring."
+  (interactive "r")
+  (let ((args (buffer-substring beg end)))
+    (setq mark-active nil)
+    (end-of-line)
+    (yas-expand-snippet
+     (concat "\n\"\"\"\n"
+             (r0fl/python-args-to-docstring args)
+             "\n\"\"\""))))
+
+(defun r0fl/py-def-to-doc (beg end)
+  (interactive "r")
+  (let ((def (buffer-substring beg end)))
+    (setq mark-active nil)
+    (end-of-line)
+    (yas-expand-snippet (concat
+                         "\n\"\"\""
+                         (replace-regexp-in-string "_" " " def)
+                         ".\"\"\"\n"))))
+
+(defun r0fl/toggle-pyright-type ()
+  (interactive)
+  (if (string-match-p "basic" lsp-pyright-typechecking-mode)
+      (setq lsp-pyright-typechecking-mode "strict")
+    (setq lsp-pyright-typechecking-mode "basic"))
+  (lsp-restart-workspace)
+  (message "typechecking is: " lsp-pyright-typechecking-mode))
