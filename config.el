@@ -38,8 +38,7 @@
                                 "--header-insertion=never"))
 
 (add-hook! 'prog-mode-hook
-           #'rainbow-delimiters-mode
-           #'evil-quickscope-always-mode)
+           #'rainbow-delimiters-mode)
 
 (after! tex
   (setq +latex-viewers '(pdf-tools zathura))
@@ -57,10 +56,6 @@
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
-
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type 'relative)
 
 (setq vterm-module-cmake-args "-DUSE_SYSTEM_LIBVTERM=no")
 
@@ -204,29 +199,8 @@
                       :weight 'bold)
   (setq org-fancy-priorities-list '("⚡" "⬆" "⬇" "☕")))
 
-(after! ruby
-  (add-to-list 'hs-special-modes-alist
-               `(ruby-mode
-                 ,(rx (or "def" "class" "module" "do" "{" "[")) ; Block start
-                 ,(rx (or "}" "]" "end"))                       ; Block end
-                 ,(rx (or "#" "=begin"))                        ; Comment start
-                 ruby-forward-sexp nil)))
-
 (after! web-mode
   (add-to-list 'auto-mode-alist '("\\.njk\\'" . web-mode)))
-
-(defun +data-hideshow-forward-sexp (arg)
-  (let ((start (current-indentation)))
-    (forward-line)
-    (unless (= start (current-indentation))
-      (require 'evil-indent-plus)
-      (let ((range (evil-indent-plus--same-indent-range)))
-        (goto-char (cadr range))
-        (end-of-line)))))
-
-(add-to-list 'hs-special-modes-alist '(yaml-mode "\\s-*\\_<\\(?:[^:]+\\)\\_>" "" "#" +data-hideshow-forward-sexp nil))
-
-(remove-hook 'enh-ruby-mode-hook #'+ruby|init-robe)
 
 (setq +magit-hub-features t)
 
@@ -663,6 +637,12 @@ If nothing is selected, use the word under cursor as function name to look up."
   (advice-add 'magit-branch-or-checkout :after #'refresh-vc-state))
 
 
+;; Trigger after rust-mode is loaded
+(setq lsp-rust-server 'rust-analyzer)
+(setq rustic-lsp-server 'rust-analyzer)
+(with-eval-after-load 'rust-mode
+  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+
                                         ; accept completion from copilot and fallback to company
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
@@ -784,3 +764,25 @@ If nothing is selected, use the word under cursor as function name to look up."
     (setq lsp-pyright-typechecking-mode "basic"))
   (lsp-restart-workspace)
   (message "typechecking is: " lsp-pyright-typechecking-mode))
+
+;; ejc-sql conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq clomacs-httpd-default-port 8090)
+(setq ejc-use-flx t)
+(setq ejc-flx-threshold 2)
+(setq ejc-completion-system 'ido)
+
+(use-package! ejc-autocomplete)
+(add-hook 'ejc-sql-minor-mode-hook
+          (lambda ()
+            (auto-complete-mode t)
+            (ejc-ac-setup)))
+
+;; Smudge conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(use-package! smudge
+  :bind-keymap ("C-c ." . smudge-command-map)
+  :custom
+  (smudge-oauth2-client-secret (getenv "SMUDGE_CLIENT_SECRET"))
+  (smudge-oauth2-client-id (getenv "SMUDGE_CLIENT_ID"))
+  ;; optional: enable transient map for frequent commands
+  (smudge-player-use-transient-map t))
