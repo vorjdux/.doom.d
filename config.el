@@ -786,3 +786,95 @@ If nothing is selected, use the word under cursor as function name to look up."
   (smudge-oauth2-client-id (getenv "SMUDGE_CLIENT_ID"))
   ;; optional: enable transient map for frequent commands
   (smudge-player-use-transient-map t))
+
+(setq ispell-hunspell-dictionary-alist
+      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
+
+;; Pylint conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun my/set-pylintrc-path ()
+  "Set `flycheck-pylintrc` based on the project's root."
+  (let ((project-root (projectile-project-root)))
+    (when project-root
+      (setq-local flycheck-pylintrc (expand-file-name ".pylintrc" project-root)))))
+
+(add-hook 'python-mode-hook 'my/set-pylintrc-path)
+
+;; Daily Box of names conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defface daily-large-font-face
+  '((t (:height 8))) ;; Adjust the :height as needed; 1.0 is default, 1.5 is 50% larger, etc.
+  "Face for displaying names with a larger font size.")
+
+(defvar daily-names-list nil
+  "List of names to display.")
+
+(defvar daily-used-names nil
+  "List of names that have been used.")
+
+(defvar daily-last-picked-name nil
+  "The last name that was picked.")
+
+(defun daily-display-boxed-names-slackware-style ()
+  "Display a list of NAMES in a centered layout, utilizing the full width of the buffer."
+  (let* ((buffer (get-buffer-create "*Team Meeting - Name Draw*"))
+         (max-name-length (apply 'max (mapcar 'string-width daily-names-list)))
+         (padding 4) ;; Adjust padding around names if needed
+         (window-width (window-width (selected-window)))) ;; Use full width of the buffer
+    (with-current-buffer buffer
+      (erase-buffer)
+      ;; Iterate over each name and format it, centralized in the buffer
+      (dolist (name daily-names-list)
+        (let* ((name-length (string-width name))
+               (total-padding (- window-width name-length))
+               (padding-left (make-string (/ total-padding 2) ?\s)) ;; Centralize the name
+               (is-used (member name daily-used-names))
+               (face (cond ((string= name daily-last-picked-name) '(:foreground "yellow" :inherit daily-large-font-face))
+                           (is-used '(:strike-through t :inherit daily-large-font-face))
+                           (t '(:foreground "light green" :inherit daily-large-font-face))))
+               (name-with-face (propertize name 'face face)))
+          ;; Insert padded line with name having specific face
+          (insert padding-left name-with-face "\n")))
+      (goto-char (point-min)))
+    ;; Display the buffer
+    (pop-to-buffer buffer)))
+
+
+(defun daily-pick-random-name ()
+  "Pick a random name from the list, mark it as used, and highlight it."
+  (interactive)
+  (unless daily-names-list
+    (error "Names list is empty. Please load names first."))
+  (let ((unused-names (cl-set-difference daily-names-list daily-used-names :test 'string=)))
+    (if (not unused-names)
+        (message "All names have been used.")
+      (let ((picked-name (nth (random (length unused-names)) unused-names)))
+        (push picked-name daily-used-names)
+        (setq daily-last-picked-name picked-name)
+        (daily-display-boxed-names-slackware-style)
+        (message "Picked name: %s" picked-name)))))
+
+(defun daily-load-names (names)
+  "Load a list of NAMES into the names list."
+  (interactive "sEnter names (comma-separated): ")
+  (setq daily-names-list (split-string names "," t))
+  (setq daily-used-names nil)
+  (setq daily-last-picked-name nil)
+  (message "Loaded names: %s" daily-names-list))
+
+(defun daily-load-names-from-file (file-path)
+  "Load names from a file specified by FILE-PATH, with one name per line."
+  (interactive "fEnter the path of the file: ")
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (setq daily-names-list (split-string (buffer-string) "\n" t "\\s-*"))
+    (setq daily-used-names nil)
+    (setq daily-last-picked-name nil)
+    (message "Loaded names from file: %s" file-path)))
+
+;; Global keybindings
+(global-set-key (kbd "C-c L") 'daily-load-names)
+(global-set-key (kbd "C-c F") 'daily-load-names-from-file)
+(global-set-key (kbd "C-c R") 'daily-pick-random-name)
+
+;; Assuming you're using Doom Emacs, this part may need adjustment based on your specific configuration
+(after! popup
+  (set-popup-rule! "^\\*Team Meeting - Name Draw\\*$" :size 1 :select t :quit t :ttl nil :fullscreen t))
