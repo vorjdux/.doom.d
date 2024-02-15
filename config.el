@@ -850,7 +850,8 @@ If nothing is selected, use the word under cursor as function name to look up."
         (push picked-name daily-used-names)
         (setq daily-last-picked-name picked-name)
         (daily-display-boxed-names-slackware-style)
-        (message "Picked name: %s" picked-name)))))
+        (message "Picked name: %s" picked-name)
+        (play-sound-file "~/.doom.d/sounds/beep-03.wav")))))
 
 (defun daily-load-names (names)
   "Load a list of NAMES into the names list."
@@ -875,6 +876,5 @@ If nothing is selected, use the word under cursor as function name to look up."
 (global-set-key (kbd "C-c F") 'daily-load-names-from-file)
 (global-set-key (kbd "C-c R") 'daily-pick-random-name)
 
-;; Assuming you're using Doom Emacs, this part may need adjustment based on your specific configuration
 (after! popup
-  (set-popup-rule! "^\\*Team Meeting - Name Draw\\*$" :size 1 :select t :quit t :ttl nil :fullscreen t))
+  (set-popup-rule! "^\\*Team Meeting - Name Draw\\*$" :size 0.5 :select t :quit t :ttl nil :fullscreen t))
