@@ -800,10 +800,6 @@ If nothing is selected, use the word under cursor as function name to look up."
 (add-hook 'python-mode-hook 'my/set-pylintrc-path)
 
 ;; Daily Box of names conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defface daily-large-font-face
-  '((t (:height 8))) ;; Adjust the :height as needed; 1.0 is default, 1.5 is 50% larger, etc.
-  "Face for displaying names with a larger font size.")
-
 (defvar daily-names-list nil
   "List of names to display.")
 
@@ -817,7 +813,7 @@ If nothing is selected, use the word under cursor as function name to look up."
   "Display a list of NAMES in a centered layout, utilizing the full width of the buffer."
   (let* ((buffer (get-buffer-create "*Team Meeting - Name Draw*"))
          (max-name-length (apply 'max (mapcar 'string-width daily-names-list)))
-         (padding 4) ;; Adjust padding around names if needed
+         (padding 8) ;; Adjust padding around names if needed
          (window-width (window-width (selected-window)))) ;; Use full width of the buffer
     (with-current-buffer buffer
       (erase-buffer)
@@ -827,9 +823,9 @@ If nothing is selected, use the word under cursor as function name to look up."
                (total-padding (- window-width name-length))
                (padding-left (make-string (/ total-padding 2) ?\s)) ;; Centralize the name
                (is-used (member name daily-used-names))
-               (face (cond ((string= name daily-last-picked-name) '(:foreground "yellow" :inherit daily-large-font-face))
-                           (is-used '(:strike-through t :inherit daily-large-font-face))
-                           (t '(:foreground "light green" :inherit daily-large-font-face))))
+               (face (cond ((string= name daily-last-picked-name) '(:foreground "yellow" :height 1.5 :weight bold))
+                           (is-used '(:strike-through t :height 1.5))
+                           (t '(:foreground "light green" :height 1.5))))
                (name-with-face (propertize name 'face face)))
           ;; Insert padded line with name having specific face
           (insert padding-left name-with-face "\n")))
@@ -851,7 +847,7 @@ If nothing is selected, use the word under cursor as function name to look up."
         (setq daily-last-picked-name picked-name)
         (daily-display-boxed-names-slackware-style)
         (message "Picked name: %s" picked-name)
-        (play-sound-file "~/.doom.d/sounds/beep-03.wav")))))
+        (play-sound-file "~/.doom.d/sounds/picked.wav")))))
 
 (defun daily-load-names (names)
   "Load a list of NAMES into the names list."
