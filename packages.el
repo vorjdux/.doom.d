@@ -7,7 +7,6 @@
 
 
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
-(package! virtualenvwrapper)
 (package! ob-typescript)
 (package! indium)
 (package! reason-mode)
@@ -35,6 +34,7 @@
 (package! flycheck-rust)
 (package! smudge)
 (package! decide)
+(package! rg)
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:

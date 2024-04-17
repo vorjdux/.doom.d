@@ -1,35 +1,27 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; Place your private configuration here! Remember, you do not need to run 'doom
-;; sync' after modifying this file!
-
-
-;; Some functionality uses this to identify you, e.g. GPG configuration, email
-;; clients, file templates and snippets.
+;; User Informoation
 (setq user-full-name "Matheus (vorjdux) Santos"
       user-mail-address "vorj.dux@gmail.com")
 
-;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
-;; are the three important ones:
-;;
-;; + `doom-font'
-;; + `doom-variable-pitch-font'
-;; + `doom-big-font' -- used for `doom-big-font-mode'; use this for
-;;   presentations or streaming.
-;;
-;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
-;; font string. You generally only need these two:
+;; Font Configuration
+;; Uncomment and adjust the following lines according to your preferences.
 ;; (setq doom-font (font-spec :family "monospace" :size 12 :weight 'semi-light)
 ;;       doom-variable-pitch-font (font-spec :family "sans" :size 13))
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
+;; Theme and Display Settings
 (setq doom-theme 'doom-dark+
       display-line-numbers-type 'relative
       +format-on-save-enabled-modes '(c++-mode python-mode c-mode latex-mode rust-mode)
       projectile-enable-caching (not (executable-find doom-projectile-fd-binary)))
 
+;; Doom Modeline
+(global-auto-revert-mode t)
+
+;; Programming Languages and Frameworks Configuration
+;; This section includes settings specific to programming languages like Python, C++, etc.
+
+;; C/C++ and LSP
 (setq lsp-clients-clangd-args '("-j=3"
                                 "--background-index"
                                 "--clang-tidy"
@@ -40,12 +32,12 @@
 (add-hook! 'prog-mode-hook
            #'rainbow-delimiters-mode)
 
+;; TeX and LaTeX
 (after! tex
   (setq +latex-viewers '(pdf-tools zathura))
   (setq-default TeX-master nil)
   (require 'doc-view))
 
-(setq-hook! 'python-mode-hook +format-with-lsp nil)
 
 (after! rainbow-delimiters
   (setq rainbow-delimiters-max-face-count 9))
@@ -57,6 +49,7 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+;; VTerm Configuration
 (setq vterm-module-cmake-args "-DUSE_SYSTEM_LIBVTERM=no")
 
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -81,7 +74,6 @@
 ;;(add-to-list 'default-frame-alist
 ;;             '(ns-appearance . light))
 
-(global-auto-revert-mode t)
 
 ;; (add-hook! 'org-mode-hook #'+org-pretty-mode #'mixed-pitch-mode)
 
@@ -94,13 +86,13 @@
 (setq
  default-directory "~"
  dart-format-on-save t
- web-mode-markup-indent-offset 2
- web-mode-code-indent-offset 2
- web-mode-css-indent-offset 2
+ web-mode-markup-indent-offset 4
+ web-mode-code-indent-offset 4
+ web-mode-css-indent-offset 4
  mac-command-modifier 'meta
- js-indent-level 2
- typescript-indent-level 2
- json-reformat:indent-width 2
+ js-indent-level 4
+ typescript-indent-level 4
+ json-reformat:indent-width 4
  prettier-js-args '("--single-quote")
  projectile-project-search-path '("~/Projects/muzzley" "~/Projects/opensource")
  dired-dwim-target t
@@ -109,7 +101,7 @@
  org-tags-column -80
  org-agenda-files (ignore-errors (directory-files +org-dir t "\\.org$" t))
  org-log-done 'time
- css-indent-offset 2
+ css-indent-offset 4
  org-refile-targets (quote ((nil :maxlevel . 1)))
  org-capture-templates '(("x" "Note" entry
                           (file+olp+datetree "journal.org")
@@ -132,13 +124,6 @@
                             :deadline future)
                            (:name "Big Outcomes"
                             :tag "bo")))
-
-(venv-initialize-interactive-shells) ;; if you want interactive shell support
-(venv-initialize-eshell) ;; if you want eshell support
-;; note that setting `venv-location` is not necessary if you
-;; use the default location (`~/.virtualenvs`), or if the
-;; the environment variable `WORKON_HOME` points to the right place
-(setq venv-location "~/.virtualenvs")
 
 (add-hook! reason-mode
   (add-hook 'before-save-hook #'refmt-before-save nil t))
@@ -638,19 +623,20 @@ If nothing is selected, use the word under cursor as function name to look up."
 
 
 ;; Trigger after rust-mode is loaded
-(setq lsp-rust-server 'rust-analyzer)
-(setq rustic-lsp-server 'rust-analyzer)
-(with-eval-after-load 'rust-mode
+(after! rust-mode
+  (setq lsp-rust-server 'rust-analyzer)
+  (setq rustic-lsp-server 'rust-analyzer)
   (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
 
-                                        ; accept completion from copilot and fallback to company
+
+;; Accept completion from copilot and fallback to company
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
   :bind (("C-TAB" . 'copilot-accept-completion-by-word)
          ("C-<tab>" . 'copilot-accept-completion-by-word)
          :map copilot-completion-map
-         ("<tab>" . 'copilot-accept-completion)
-         ("TAB" . 'copilot-accept-completion)))
+         ("C-y" . 'copilot-accept-completion)
+         ("C-Y" . 'copilot-accept-completion)))
 
                                         ; Magit Blamer
 (use-package blamer
@@ -676,97 +662,7 @@ If nothing is selected, use the word under cursor as function name to look up."
 
 (advice-add 'magit-checkout :after #'+cwejman-vc-refresh-modelines)
 
-(after! dap-mode
-  (setq dap-python-executable "python3"
-        dap-python-debugger 'debugpy
-        dap-auto-configure-features '(breakpoints expressions controls tooltip repl locals)
-        dap-ui-buffer-configurations '(("*dap-ui-locals*" (side . right) (slot . 1) (window-width . 0.3))
-                                       ("*dap-ui-expressions*" (side . right) (slot . 2) (window-width . 0.3))
-                                       ("*dap-ui-sessions*" (side . right) (slot . 3) (window-width . 0.3))
-                                       ("*dap-ui-breakpoints*" (side . left) (slot . 2) (window-width . 35))
-                                       ("*debug-window*" (side . bottom) (slot . 3) (window-width . 0.2))
-                                       ("*dap-ui-repl*" (side . bottom) (slot . 1) (window-height . 0.45))))
-  (map! :map dap-mode-map
-        :leader
-        :prefix ("d" . "dap")
-        ;; basics
-        :desc "dap next"          "n" #'dap-next
-        :desc "dap step in"       "i" #'dap-step-in
-        :desc "dap step out"      "o" #'dap-step-out
-        :desc "dap continue"      "c" #'dap-continue
-        :desc "dap hydra"         "h" #'dap-hydra
-        :desc "dap debug restart" "r" #'dap-debug-restart
-        :desc "dap debug"         "s" #'dap-debug
-
-        ;; debug
-        :prefix ("dd" . "Debug")
-        :desc "dap debug recent"  "r" #'dap-debug-recent
-        :desc "dap debug last"    "l" #'dap-debug-last
-
-        ;; eval
-        :prefix ("de" . "Eval")
-        :desc "eval"                "e" #'dap-eval
-        :desc "eval region"         "r" #'dap-eval-region
-        :desc "eval thing at point" "s" #'dap-eval-thing-at-point
-        :desc "add expression"      "a" #'dap-ui-expressions-add
-        :desc "remove expression"   "d" #'dap-ui-expressions-remove
-
-        :prefix ("db" . "Breakpoint")
-        :desc "dap breakpoint toggle"      "b" #'dap-breakpoint-toggle
-        :desc "dap breakpoint condition"   "c" #'dap-breakpoint-condition
-        :desc "dap breakpoint hit count"   "h" #'dap-breakpoint-hit-condition
-        :desc "dap breakpoint log message" "l" #'dap-breakpoint-log-message))
-
-(defun r0fl/python-args-to-docstring (&optional arguments)
-  "return docstring format for the python arguments in yas-text or in ARGUMENTS"
-  (let* ((indent  "\n" )
-         (args (if arguments
-                   (python-split-args arguments)
-                 (python-split-args yas-text)))
-         (formatted-args (mapconcat
-                          (lambda (x)
-                            (let ((arg (nth 0 x)))
-                              (concat arg (if (string-match-p ":" arg) "\n" " :\n")))) args indent)))
-    (unless (string= formatted-args "")
-      (mapconcat 'identity (list "Parameter\n---------" formatted-args) indent))))
-
-(defun r0fl/python-return-to-docstring (&optional type)
-  "Return docstring format for the python return type in yas-text or in TYPE"
-  (let ((type-intern (or type yas-text)))
-    (when (not (equal "None" type-intern))
-      (concat "Return\n------\n" type-intern " :\n"))))
-
-(defun r0fl/py-args-to-doc (beg end)
-  "Convert python arguments between BEG and END to docstring."
-  (interactive "r")
-  (let ((args (buffer-substring beg end)))
-    (setq mark-active nil)
-    (end-of-line)
-    (yas-expand-snippet
-     (concat "\n\"\"\"\n"
-             (r0fl/python-args-to-docstring args)
-             "\n\"\"\""))))
-
-(defun r0fl/py-def-to-doc (beg end)
-  (interactive "r")
-  (let ((def (buffer-substring beg end)))
-    (setq mark-active nil)
-    (end-of-line)
-    (yas-expand-snippet (concat
-                         "\n\"\"\""
-                         (replace-regexp-in-string "_" " " def)
-                         ".\"\"\"\n"))))
-
-(defun r0fl/toggle-pyright-type ()
-  (interactive)
-  (if (string-match-p "basic" lsp-pyright-typechecking-mode)
-      (setq lsp-pyright-typechecking-mode "strict")
-    (setq lsp-pyright-typechecking-mode "basic"))
-  (lsp-restart-workspace)
-  (message "typechecking is: " lsp-pyright-typechecking-mode))
-
 ;; ejc-sql conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (setq clomacs-httpd-default-port 8090)
 (setq ejc-use-flx t)
 (setq ejc-flx-threshold 2)
@@ -790,15 +686,6 @@ If nothing is selected, use the word under cursor as function name to look up."
 (setq ispell-hunspell-dictionary-alist
       '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
 
-;; Pylint conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun my/set-pylintrc-path ()
-  "Set `flycheck-pylintrc` based on the project's root."
-  (let ((project-root (projectile-project-root)))
-    (when project-root
-      (setq-local flycheck-pylintrc (expand-file-name ".pylintrc" project-root)))))
-
-(add-hook 'python-mode-hook 'my/set-pylintrc-path)
-
 ;; Daily Box of names conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar daily-names-list nil
   "List of names to display.")
@@ -813,22 +700,26 @@ If nothing is selected, use the word under cursor as function name to look up."
   "Display a list of NAMES in a centered layout, utilizing the full width of the buffer."
   (let* ((buffer (get-buffer-create "*Team Meeting - Name Draw*"))
          (max-name-length (apply 'max (mapcar 'string-width daily-names-list)))
-         (padding 8) ;; Adjust padding around names if needed
          (window-width (window-width (selected-window)))) ;; Use full width of the buffer
     (with-current-buffer buffer
       (erase-buffer)
+      (insert (make-string window-width ?\s) "\n\n\n")
       ;; Iterate over each name and format it, centralized in the buffer
       (dolist (name daily-names-list)
         (let* ((name-length (string-width name))
                (total-padding (- window-width name-length))
-               (padding-left (make-string (/ total-padding 2) ?\s)) ;; Centralize the name
+               ;; Calculate left padding to center the name
+               (padding-left (floor (/ total-padding 2)))
+               (padding-right (ceiling (/ total-padding 2)))
+               ;; Ensure padding is applied symmetrically
+               (padding-left-str (make-string padding-left ?\s))
                (is-used (member name daily-used-names))
                (face (cond ((string= name daily-last-picked-name) '(:foreground "yellow" :height 1.5 :weight bold))
                            (is-used '(:strike-through t :height 1.5))
                            (t '(:foreground "light green" :height 1.5))))
                (name-with-face (propertize name 'face face)))
           ;; Insert padded line with name having specific face
-          (insert padding-left name-with-face "\n")))
+          (insert padding-left-str name-with-face (make-string padding-right ?\s) "\n")))
       (goto-char (point-min)))
     ;; Display the buffer
     (pop-to-buffer buffer)))
@@ -857,15 +748,28 @@ If nothing is selected, use the word under cursor as function name to look up."
   (setq daily-last-picked-name nil)
   (message "Loaded names: %s" daily-names-list))
 
+;;(defun daily-load-names-from-file (file-path)
+;;  "Load names from a file specified by FILE-PATH, with one name per line."
+;;  (interactive "fEnter the path of the file: ")
+;;  (with-temp-buffer
+;;    (insert-file-contents file-path)
+;;    (setq daily-names-list (split-string (buffer-string) "\n" t "\\s-*"))
+;;    (setq daily-used-names nil)
+;;    (setq daily-last-picked-name nil)
+;;    (message "Loaded names from file: %s" file-path)))
+
 (defun daily-load-names-from-file (file-path)
-  "Load names from a file specified by FILE-PATH, with one name per line."
+  "Load names from a file specified by FILE-PATH, with one name per line, ignoring lines starting with '-'."
   (interactive "fEnter the path of the file: ")
   (with-temp-buffer
     (insert-file-contents file-path)
-    (setq daily-names-list (split-string (buffer-string) "\n" t "\\s-*"))
-    (setq daily-used-names nil)
-    (setq daily-last-picked-name nil)
-    (message "Loaded names from file: %s" file-path)))
+    ;; First, split the buffer string into lines.
+    (let ((lines (split-string (buffer-string) "\n" t)))
+      ;; Then, filter out any lines that start with "-".
+      (setq daily-names-list (cl-remove-if (lambda (line) (string-prefix-p "-" line)) lines))
+      (setq daily-used-names nil)
+      (setq daily-last-picked-name nil)
+      (message "Loaded names from file: %s" file-path))))
 
 ;; Global keybindings
 (global-set-key (kbd "C-c L") 'daily-load-names)
@@ -874,3 +778,16 @@ If nothing is selected, use the word under cursor as function name to look up."
 
 (after! popup
   (set-popup-rule! "^\\*Team Meeting - Name Draw\\*$" :size 0.5 :select t :quit t :ttl nil :fullscreen t))
+
+;; rg config with custom code search in a project
+(use-package! rg
+  :config
+  (rg-enable-default-bindings)
+  (setq rg-group-result t
+        rg-show-columns t
+        rg-custom-type-aliases nil
+        rg-default-alias-fallback "all"
+        rg-ignore-case 'smart
+        rg-global-extra-args '("--glob" "!*.git/*" "--glob" "!*cache*" "--glob" "!node_modules/*" "--glob" "!*.log")))
+
+(add-hook 'prog-mode-hook 'which-function-mode)
