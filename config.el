@@ -32,6 +32,20 @@
 (add-hook! 'prog-mode-hook
            #'rainbow-delimiters-mode)
 
+;; Ensure clang-format is used for C++ files
+(setq +format-with-lsp nil)
+
+;; Hook to use clang-format on save
+(defun my-c++-mode-hook ()
+  (add-hook 'before-save-hook 'clang-format-buffer nil t))
+
+(add-hook 'c++-mode-hook 'my-c++-mode-hook)
+
+;; Load clang-format
+(use-package! clang-format
+  :defer t
+  :hook (c-mode-common . (lambda () (add-hook 'before-save-hook 'clang-format-buffer nil t))))
+
 ;; TeX and LaTeX
 (after! tex
   (setq +latex-viewers '(pdf-tools zathura))
@@ -51,6 +65,66 @@
 
 ;; VTerm Configuration
 (setq vterm-module-cmake-args "-DUSE_SYSTEM_LIBVTERM=no")
+
+;; Additional customizations
+(setq-default c-basic-offset 4
+              c++-basic-offset 4
+              tab-width 4
+              indent-tabs-mode nil)
+
+;; Hook to format C++ files using clang-format on save
+(use-package! clang-format
+  :defer t)
+
+(map! :leader
+      :desc "Format buffer with clang-format" "c f" #'clang-format-buffer)
+
+(after! lsp-clangd
+  (setq lsp-clients-clangd-args '("-j=4" "--clang-tidy"))
+  )
+
+(add-hook 'c++-mode-hook
+          (lambda () (add-hook 'before-save-hook #'clang-format-buffer nil 'local)))
+
+
+;; Python (pyenv setup)
+
+(use-package! pyvenv
+  :config
+  (setq pyvenv-workon-home "~/.virtualenvs")
+  (pyvenv-mode 1)
+
+  ;; Update `python-shell-interpreter` dynamically
+  (defun update-python-interpreter ()
+    (setq python-shell-interpreter (executable-find "python")))
+
+  ;; Auto-activate virtual environment based on project name
+  (defun my-auto-activate-venv-by-project-name ()
+    "Activate a virtual environment matching the project name in `pyvenv-workon-home`."
+    (let* ((project-root (projectile-project-root))
+           (project-name (when project-root
+                           (file-name-nondirectory (directory-file-name project-root)))))
+      (if (and project-name
+               (member project-name (directory-files pyvenv-workon-home)))
+          (pyvenv-workon project-name)
+        (set-pyenv-version))
+      (update-python-interpreter)))
+
+  ;; Fallback to pyenv global if no specific venv is found
+  (defun set-pyenv-version ()
+    (let ((pyenv-path (string-trim (shell-command-to-string "pyenv which python"))))
+      (setq python-shell-interpreter pyenv-path)))
+
+  ;; Activate venv by project and update Python interpreter
+  (add-hook 'python-mode-hook 'my-auto-activate-venv-by-project-name)
+  (add-hook 'pyvenv-post-activate-hooks 'update-python-interpreter))
+
+(after! lsp-pyright
+  (setq lsp-pyright-python-executable-cmd (executable-find "python")))
+
+;; Ensure LSP restarts on environment activation
+(add-hook 'pyvenv-post-activate-hooks (lambda () (lsp-restart-workspace)))
+
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -74,6 +148,7 @@
 ;;(add-to-list 'default-frame-alist
 ;;             '(ns-appearance . light))
 
+(add-to-list 'exec-path "/home/vorjdux/.nvm/versions/node/v20.13.1/bin")
 
 ;; (add-hook! 'org-mode-hook #'+org-pretty-mode #'mixed-pitch-mode)
 
@@ -128,21 +203,11 @@
 (add-hook! reason-mode
   (add-hook 'before-save-hook #'refmt-before-save nil t))
 
-(add-hook!
- js2-mode 'prettier-js-mode
- (add-hook 'before-save-hook #'refmt-before-save nil t))
-
 (map! :ne "M-/" #'comment-or-uncomment-region)
 (map! :ne "SPC / r" #'deadgrep)
 (map! :ne "SPC n b" #'org-brain-visualize)
 
-;; (def-package! parinfer ; to configure it
-;;   :bind (("C-," . parinfer-toggle-mode)
-;;          ("<tab>" . parinfer-smart-tab:dwim-right)
-;;          ("S-<tab>" . parinfer-smart-tab:dwim-left))
-;;   :hook ((clojure-mode emacs-lisp-mode common-lisp-mode lisp-mode) . parinfer-mode)
-;;   :config (setq parinfer-extensions '(defaults pretty-parens evil paredit)))
-
+;; Org conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (after! org
   (set-face-attribute 'org-link nil
                       :weight 'normal
@@ -184,16 +249,41 @@
                       :weight 'bold)
   (setq org-fancy-priorities-list '("⚡" "⬆" "⬇" "☕")))
 
-(after! web-mode
-  (add-to-list 'auto-mode-alist '("\\.njk\\'" . web-mode)))
-
 (setq +magit-hub-features t)
 
 (set-popup-rule! "^\\*Org Agenda" :side 'bottom :size 0.90 :select t :ttl nil)
 (set-popup-rule! "^CAPTURE.*\\.org$" :side 'bottom :size 0.90 :select t :ttl nil)
 (set-popup-rule! "^\\*org-brain" :side 'right :size 1.00 :select t :ttl nil)
 
+(use-package org-mode
+  :init
+  ;; This allows PlantUML, Graphviz and ditaa diagrams
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((ditaa . t)
+     (dot . t)
+     (plantuml . t)))
 
+  :hook
+  (org-babel-after-execute . org-redisplay-inline-images)
+
+  :custom
+  (org-edit-src-content-indentation 0)
+  ;; PlantUML was too old on Debian Bookworm, so a recent copy is
+  ;; installed in /usr/local/share
+  (org-plantuml-jar-path "/usr/local/share/plantuml/plantuml.jar")
+  ;; ditaa installed through dpkg on Debian
+  (org-ditaa-jar-path "/usr/local/share/ditaa/ditaa.jar")
+  ;; Do not ask before evaluating a code block
+  (org-confirm-babel-evaluate nil)
+  ;; Fix for including SVGs
+  (org-latex-pdf-process
+   '("%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "bibtex %b"
+     "%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "%latex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+  )
+(plist-put org-format-latex-options :background "White")
 
 ;; git conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -231,266 +321,16 @@
 ;; ;; }}
 
 
-
-;; {{ git-gutter
-;;(local-require 'git-gutter)
-
-(defun git-gutter-reset-to-head-parent()
-  "Reset  gutter to HEAD^.  Support Subversion and Git."
-  (interactive)
-  (let* (parent (filename (buffer-file-name)))
-    (if (eq git-gutter:vcs-type 'svn)
-        (setq parent "PREV")
-      (setq parent (if filename (concat (shell-command-to-string (concat "git --no-pager log --oneline -n1 --pretty=\"format:%H\" " filename)) "^") "HEAD^")))
-    (git-gutter:set-start-revision parent)
-    (message "git-gutter:set-start-revision HEAD^")))
-
-
-(defun my-git-commit-id ()
-  "Select commit id from current branch."
-  (let* ((git-cmd "git --no-pager log --date=short --pretty=format:'%h|%ad|%s|%an'")
-         (collection (nonempty-lines (shell-command-to-string git-cmd)))
-         (item (ffip-completing-read "git log:" collection)))
-    (when item
-      (car (split-string item "|" t)))))
-
-(defun my-git-show-commit-internal ()
-  "Show git commit"
-  (let* ((id (my-git-commit-id)))
-    (when id
-      (shell-command-to-string (format "git show %s" id)))))
-
-(defun my-git-show-commit ()
-  "Show commit using ffip."
-  (interactive)
-  (let* ((ffip-diff-backends '(("Show git commit" . my-git-show-commit-internal))))
-    (ffip-show-diff 0)))
-
-(defun git-gutter-toggle ()
-  "Toggle git gutter."
-  (interactive)
-  (git-gutter-mode -1)
-  ;; git-gutter-fringe doesn't seem to
-  ;; clear the markup right away
-  (sit-for 0.1)
-  (git-gutter:clear))
-
-(defun git-gutter-reset-to-default ()
-  (interactive)
-  (git-gutter:set-start-revision nil)
-  (message "git-gutter reset"))
-
-(global-git-gutter-mode t)
-
-;; nobody use bzr
-;; I could be forced to use subversion or hg which has higher priority
-(custom-set-variables '(git-gutter:handled-backends '(svn hg git)))
-
-(unless (fboundp 'global-display-line-numbers-mode)
-  ;; git-gutter's workaround for linum-mode bug.
-  ;; should not be used in `display-line-number-mode`
-  (git-gutter:linum-setup))
-
-(global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
-(global-set-key (kbd "C-x v =") 'git-gutter:popup-hunk)
-;; Stage current hunk
-(global-set-key (kbd "C-x v s") 'git-gutter:stage-hunk)
-;; Revert current hunk
-(global-set-key (kbd "C-x v r") 'git-gutter:revert-hunk)
-;; }}
-
-;; {{ git-timemachine
-(defun my-git-timemachine-show-selected-revision ()
-  "Show last (current) revision of file."
-  (interactive)
-  (let* ((collection (mapcar (lambda (rev)
-                               ;; re-shape list for the ivy-read
-                               (cons (concat (substring-no-properties (nth 0 rev) 0 7) "|" (nth 5 rev) "|" (nth 6 rev)) rev))
-                             (git-timemachine--revisions))))
-    (ivy-read "commits:"
-              collection
-              :action (lambda (rev)
-                        ;; compatible with ivy 8+ and later ivy version
-                        (unless (string-match-p "^[a-z0-9]*$" (car rev))
-                          (setq rev (cdr rev)))
-                        (git-timemachine-show-revision rev)))))
-
-(defun my-git-timemachine ()
-  "Open git snapshot with the selected version."
-  (interactive)
-  (my-ensure 'git-timemachine)
-  (git-timemachine--start #'my-git-timemachine-show-selected-revision))
-;; }}
-
-(defun git-get-current-file-relative-path ()
-  "Get relative path of current file for Git."
-  (replace-regexp-in-string (concat "^" (file-name-as-directory default-directory))
-                            ""
-                            buffer-file-name))
-
-(defun git-checkout-current-file ()
-  "Git checkout current file."
-  (interactive)
-  (when (and (buffer-file-name)
-             (yes-or-no-p (format "git checkout %s?"
-                                  (file-name-nondirectory (buffer-file-name)))))
-    (let* ((filename (git-get-current-file-relative-path)))
-      (shell-command (concat "git checkout " filename))
-      (message "DONE! git checkout %s" filename))))
-
-(defvar git-commit-message-history nil)
-(defun git-commit-tracked ()
-  "Run 'git add -u' and commit."
-  (interactive)
-  (let* ((hint "Commit tracked files. Please input commit message (Enter to abort):")
-         (msg (read-from-minibuffer hint
-                                    nil
-                                    nil
-                                    nil
-                                    'git-commit-message-history)))
-    (cond
-     ((and msg (> (length msg) 3))
-      (shell-command "git add -u")
-      (shell-command (format "git commit -m \"%s\"" msg))
-      (message "Tracked files is commited."))
-     (t
-      (message "Do nothing!")))))
-
-(defun git-add-current-file ()
-  "Git add file of current buffer."
-  (interactive)
-  (when buffer-file-name
-    (let* ((filename (git-get-current-file-relative-path)))
-      (shell-command (concat "git add " filename))
-      (message "DONE! git add %s" filename))))
-
-;; {{ goto next/previous hunk
-(defun my-goto-next-hunk (arg)
-  (interactive "p")
-  (if (memq major-mode '(diff-mode))
-      (diff-hunk-next)
-    (forward-line)
-    (if (re-search-forward "\\(^<<<<<<<\\|^=======\\|^>>>>>>>\\)" (point-max) t)
-        (goto-char (line-beginning-position))
-      (forward-line -1)
-      (git-gutter:next-hunk arg))))
-
-(defun my-goto-previous-hunk (arg)
-  (interactive "p")
-  (if (memq major-mode '(diff-mode))
-      (diff-hunk-prev)
-    (forward-line -1)
-    (if (re-search-backward "\\(^>>>>>>>\\|^=======\\|^<<<<<<<\\)" (point-min) t)
-        (goto-char (line-beginning-position))
-      (forward-line -1)
-      (git-gutter:previous-hunk arg))))
-;; }}
-
-;; {{ git-gutter use ivy
-(defun my-reshape-git-gutter (gutter)
-  "Re-shape gutter for `ivy-read'."
-  (let* ((linenum-start (aref gutter 3))
-         (linenum-end (aref gutter 4))
-         (target-line "")
-         (target-linenum 1)
-         (tmp-line "")
-         (max-line-length 0))
-    (save-excursion
-      (while (<= linenum-start linenum-end)
-        (goto-line linenum-start)
-        (setq tmp-line (replace-regexp-in-string "^[ \t]*" ""
-                                                 (buffer-substring (line-beginning-position)
-                                                                   (line-end-position))))
-        (when (> (length tmp-line) max-line-length)
-          (setq target-linenum linenum-start)
-          (setq target-line tmp-line)
-          (setq max-line-length (length tmp-line)))
-
-        (setq linenum-start (1+ linenum-start))))
-    ;; build (key . linenum-start)
-    (cons (format "%s %d: %s"
-                  (if (eq 'deleted (aref gutter 1)) "-" "+")
-                  target-linenum target-line)
-          target-linenum)))
-
-(defun my-goto-git-gutter ()
-  (interactive)
-  (if git-gutter:diffinfos
-      (ivy-read "git-gutters:"
-                (mapcar 'my-reshape-git-gutter git-gutter:diffinfos)
-                :action (lambda (e)
-                          (unless (numberp e) (setq e (cdr e)))
-                          (goto-line e)))
-    (message "NO git-gutters!")))
-
-;; }}
-
-(defun my-git-log-trace-definition ()
-  "Similar to `magit-log-trace-definition' but UI is simpler.
-If multi-lines are selected, trace the defintion of line range.
-If only one line is selected, use current selection as function name to look up.
-If nothing is selected, use the word under cursor as function name to look up."
-  (interactive)
-  (when buffer-file-name
-    (let* ((range-or-func (cond
-                           ((region-active-p)
-                            (cond
-                             ((my-is-in-one-line (region-beginning) (region-end))
-                              (format ":%s" (my-selected-str)))
-                             (t
-                              (format "%s,%s"
-                                      (line-number-at-pos (region-beginning))
-                                      (line-number-at-pos (1- (region-end)))))))
-                           (t
-                            (format ":%s" (thing-at-point 'symbol)))))
-           (cmd (format "git log -L%s:%s" range-or-func (file-truename buffer-file-name)))
-           (content (shell-command-to-string cmd)))
-      (when (string-match-p "no match" content)
-        ;; mark current function and try again
-        (mark-defun)
-        (setq range-or-func (format "%s,%s"
-                                    (line-number-at-pos (region-beginning))
-                                    (line-number-at-pos (1- (region-end)))))
-        (setq cmd (format "git log -L%s:%s" range-or-func (file-truename buffer-file-name))))
-      ;; (message cmd)
-      (my-ensure 'find-file-in-project)
-      (ffip-show-content-in-diff-mode (shell-command-to-string cmd)))))
-
 (eval-after-load 'magit
   '(progn
      (ivy-mode 1)))
 
-(eval-after-load 'vc-msg-git
-  '(progn
-     ;; open file of certain revision
-     (push '("m" "[m]agit-find-file"
-             (lambda ()
-               (let* ((info vc-msg-previous-commit-info))
-                 (magit-find-file (plist-get info :id )
-                                  (concat (vc-msg-sdk-git-rootdir)
-                                          (plist-get info :filename))))))
-           vc-msg-git-extra)
+;; Refresh VC State on Buffer Switch
+(add-hook 'buffer-list-update-hook #'vc-refresh-state)
 
-     ;; copy commit hash
-     (push '("h" "[h]ash"
-             (lambda ()
-               (let* ((info vc-msg-previous-commit-info)
-                      (id (plist-get info :id)))
-                 (kill-new id)
-                 (message "%s => kill-ring" id))))
-           vc-msg-git-extra)
-
-     ;; copy commit hash
-     (push '("a" "[a]uthor"
-             (lambda ()
-               (let* ((info vc-msg-previous-commit-info)
-                      (author (plist-get info :author)))
-                 (kill-new author)
-                 (message "%s => kill-ring" author))))
-           vc-msg-git-extra)))
-
-
-
+;; Move text
+(use-package! move-text
+  :commands (move-text-default-bindings))
 
 ;; hydra conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (use-package! hydra
@@ -499,8 +339,6 @@ If nothing is selected, use the word under cursor as function name to look up."
              hydra--call-interactively-remap-maybe
              hydra-show-hint
              hydra-set-transient-map))
-
-
 
 ;; pretty-hydra conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (setq pretty-hydra-enable-use-package t)
@@ -538,9 +376,9 @@ If nothing is selected, use the word under cursor as function name to look up."
        "line number" :toggle (if (fboundp 'display-line-numbers-mode)
                                  display-line-numbers-mode
                                global-linum-mode))
-      ("a" global-aggressive-indent-mode "aggressive indent" :toggle t)
-      ("h" global-hungry-delete-mode "hungry delete" :toggle t)
-      ("e" electric-pair-mode "electric pair" :toggle t)
+      ("a" global-aggressive-indent-mode "aggressive indent" :toggle f)
+      ("h" global-hungry-delete-mode "hungry delete" :toggle f)
+      ("e" electric-pair-mode "electric pair" :toggle f)
       ("c" flyspell-mode "spell check" :toggle t)
       ("S" prettify-symbols-mode "pretty symbol" :toggle t)
       ("L" global-page-break-lines-mode "page break lines" :toggle t)
@@ -549,7 +387,7 @@ If nothing is selected, use the word under cursor as function name to look up."
      (("l" global-hl-line-mode "line" :toggle t)
       ("P" show-paren-mode "paren" :toggle t)
       ("s" symbol-overlay-mode "symbol" :toggle t)
-      ("r" rainbow-mode "rainbow" :toggle t)
+      ("r" rainbow-mode "rainbow" :toggle f)
       ("w" (setq-default show-trailing-whitespace (not show-trailing-whitespace))
        "whitespace" :toggle show-trailing-whitespace)
       ("d" rainbow-delimiters-mode "delimiter" :toggle t)
@@ -613,171 +451,32 @@ If nothing is selected, use the word under cursor as function name to look up."
        "tuna" :toggle (eq centaur-package-archives 'tuna))))))
 
 
-;; Trigger a refresh of vc-modeline  on some magit functions
-(with-eval-after-load 'magit
-  (defun refresh-vc-state () '(progn (vc-refresh-state)))
-  (advice-add 'magit-checkout :after #'refresh-vc-state)
-  (advice-add 'magit-branch-create :after #'refresh-vc-state)
-  (advice-add 'magit-branch-and-checkout :after #'refresh-vc-state)
-  (advice-add 'magit-branch-or-checkout :after #'refresh-vc-state))
-
-
 ;; Trigger after rust-mode is loaded
 (after! rust-mode
   (setq lsp-rust-server 'rust-analyzer)
   (setq rustic-lsp-server 'rust-analyzer)
   (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
 
+(setq scroll-margin 10)
 
+;; Topsi conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(use-package! topsy
+  :hook (prog-mode . topsy-mode) (magit-section-mode . topsy-mode))
+
+;; Copilot ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Accept completion from copilot and fallback to company
-(use-package! copilot
-  :hook (prog-mode . copilot-mode)
-  :bind (("C-TAB" . 'copilot-accept-completion-by-word)
-         ("C-<tab>" . 'copilot-accept-completion-by-word)
-         :map copilot-completion-map
-         ("C-y" . 'copilot-accept-completion)
-         ("C-Y" . 'copilot-accept-completion)))
+;; (use-package! copilot
+;;  :hook (prog-mode . copilot-mode)
+;;  :bind (("C-TAB" . 'copilot-accept-completion-by-word)
+;;         ("C-<tab>" . 'copilot-accept-completion-by-word)
+;;         :map copilot-completion-map
+;;         ("C-y" . 'copilot-accept-completion)
+;;         ("C-Y" . 'copilot-accept-completion)))
 
-                                        ; Magit Blamer
-(use-package blamer
-  :bind (("s-i" . blamer-show-commit-info))
-  :defer 20
-  :custom
-  (blamer-idle-time 0.3)
-  (blamer-min-offset 70)
-  :custom-face
-  (blamer-face ((t :foreground "#7a88cf"
-                   :background nil
-                   :height 140
-                   :italic t)))
-  :config
-  (global-blamer-mode 1))
-
-                                        ; Magit force update
-(defun +cwejman-vc-refresh-modelines (a)
-  (dolist (buffer (doom-buffer-list))
-    (set-buffer buffer)
-    (vc-refresh-state)
-    (+doom-modeline--update-vcs)))
-
-(advice-add 'magit-checkout :after #'+cwejman-vc-refresh-modelines)
-
-;; ejc-sql conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq clomacs-httpd-default-port 8090)
-(setq ejc-use-flx t)
-(setq ejc-flx-threshold 2)
-(setq ejc-completion-system 'ido)
-
-(use-package! ejc-autocomplete)
-(add-hook 'ejc-sql-minor-mode-hook
-          (lambda ()
-            (auto-complete-mode t)
-            (ejc-ac-setup)))
-
-;; Smudge conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(use-package! smudge
-  :bind-keymap ("C-c ." . smudge-command-map)
-  :custom
-  (smudge-oauth2-client-secret (getenv "SMUDGE_CLIENT_SECRET"))
-  (smudge-oauth2-client-id (getenv "SMUDGE_CLIENT_ID"))
-  ;; optional: enable transient map for frequent commands
-  (smudge-player-use-transient-map t))
 
 (setq ispell-hunspell-dictionary-alist
       '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
 
-;; Daily Box of names conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defvar daily-names-list nil
-  "List of names to display.")
-
-(defvar daily-used-names nil
-  "List of names that have been used.")
-
-(defvar daily-last-picked-name nil
-  "The last name that was picked.")
-
-(defun daily-display-boxed-names-slackware-style ()
-  "Display a list of NAMES in a centered layout, utilizing the full width of the buffer."
-  (let* ((buffer (get-buffer-create "*Team Meeting - Name Draw*"))
-         (max-name-length (apply 'max (mapcar 'string-width daily-names-list)))
-         (window-width (window-width (selected-window)))) ;; Use full width of the buffer
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert (make-string window-width ?\s) "\n\n\n")
-      ;; Iterate over each name and format it, centralized in the buffer
-      (dolist (name daily-names-list)
-        (let* ((name-length (string-width name))
-               (total-padding (- window-width name-length))
-               ;; Calculate left padding to center the name
-               (padding-left (floor (/ total-padding 2)))
-               (padding-right (ceiling (/ total-padding 2)))
-               ;; Ensure padding is applied symmetrically
-               (padding-left-str (make-string padding-left ?\s))
-               (is-used (member name daily-used-names))
-               (face (cond ((string= name daily-last-picked-name) '(:foreground "yellow" :height 1.5 :weight bold))
-                           (is-used '(:strike-through t :height 1.5))
-                           (t '(:foreground "light green" :height 1.5))))
-               (name-with-face (propertize name 'face face)))
-          ;; Insert padded line with name having specific face
-          (insert padding-left-str name-with-face (make-string padding-right ?\s) "\n")))
-      (goto-char (point-min)))
-    ;; Display the buffer
-    (pop-to-buffer buffer)))
-
-
-(defun daily-pick-random-name ()
-  "Pick a random name from the list, mark it as used, and highlight it."
-  (interactive)
-  (unless daily-names-list
-    (error "Names list is empty. Please load names first."))
-  (let ((unused-names (cl-set-difference daily-names-list daily-used-names :test 'string=)))
-    (if (not unused-names)
-        (message "All names have been used.")
-      (let ((picked-name (nth (random (length unused-names)) unused-names)))
-        (push picked-name daily-used-names)
-        (setq daily-last-picked-name picked-name)
-        (daily-display-boxed-names-slackware-style)
-        (message "Picked name: %s" picked-name)
-        (play-sound-file "~/.doom.d/sounds/picked.wav")))))
-
-(defun daily-load-names (names)
-  "Load a list of NAMES into the names list."
-  (interactive "sEnter names (comma-separated): ")
-  (setq daily-names-list (split-string names "," t))
-  (setq daily-used-names nil)
-  (setq daily-last-picked-name nil)
-  (message "Loaded names: %s" daily-names-list))
-
-;;(defun daily-load-names-from-file (file-path)
-;;  "Load names from a file specified by FILE-PATH, with one name per line."
-;;  (interactive "fEnter the path of the file: ")
-;;  (with-temp-buffer
-;;    (insert-file-contents file-path)
-;;    (setq daily-names-list (split-string (buffer-string) "\n" t "\\s-*"))
-;;    (setq daily-used-names nil)
-;;    (setq daily-last-picked-name nil)
-;;    (message "Loaded names from file: %s" file-path)))
-
-(defun daily-load-names-from-file (file-path)
-  "Load names from a file specified by FILE-PATH, with one name per line, ignoring lines starting with '-'."
-  (interactive "fEnter the path of the file: ")
-  (with-temp-buffer
-    (insert-file-contents file-path)
-    ;; First, split the buffer string into lines.
-    (let ((lines (split-string (buffer-string) "\n" t)))
-      ;; Then, filter out any lines that start with "-".
-      (setq daily-names-list (cl-remove-if (lambda (line) (string-prefix-p "-" line)) lines))
-      (setq daily-used-names nil)
-      (setq daily-last-picked-name nil)
-      (message "Loaded names from file: %s" file-path))))
-
-;; Global keybindings
-(global-set-key (kbd "C-c L") 'daily-load-names)
-(global-set-key (kbd "C-c F") 'daily-load-names-from-file)
-(global-set-key (kbd "C-c R") 'daily-pick-random-name)
-
-(after! popup
-  (set-popup-rule! "^\\*Team Meeting - Name Draw\\*$" :size 0.5 :select t :quit t :ttl nil :fullscreen t))
 
 ;; rg config with custom code search in a project
 (use-package! rg

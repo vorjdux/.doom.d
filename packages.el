@@ -28,13 +28,17 @@
 (package! slack)
 (package! exwm)
 (package! blamer)
-(package! ejc-sql)
 (package! auto-complete)
 (package! flx-ido)
 (package! flycheck-rust)
-(package! smudge)
+;; (package! smudge)
 (package! decide)
 (package! rg)
+(package! topsy)
+(package! org)
+(package! lsp-pyright)
+
+
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
