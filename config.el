@@ -330,7 +330,9 @@
 
 ;; Move text
 (use-package! move-text
-  :commands (move-text-default-bindings))
+  :defer nil  ;; Ensure it's loaded immediately
+  :config
+  (move-text-default-bindings))
 
 ;; hydra conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (use-package! hydra
