@@ -296,7 +296,31 @@
 (after! org
   (plist-put org-format-latex-options :background "White"))
 
-(setq +magit-hub-features t)
+;; LaTeX Configuration
+(after! ox-latex
+  ;; Enable minted for syntax highlighting in LaTeX exports
+  (setq org-latex-listings 'minted)
+
+  ;; Add minted package to the LaTeX preamble
+  (add-to-list 'org-latex-packages-alist '("" "minted"))
+
+  ;; Use xelatex or lualatex to ensure UTF-8 support and minted compatibility
+  (setq org-latex-pdf-process
+        '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  ;; Set LaTeX margins and page dimensions
+  (add-to-list 'org-latex-packages-alist '("margin=1in" "geometry")) ; Adjust margin as needed
+
+  ;; Set default LaTeX compiler
+  (setq org-latex-compiler "xelatex")
+
+  ;; Minted options to handle long lines
+  (setq org-latex-minted-options
+        '(("breaklines" "true")
+          ("breakanywhere" "true")
+          ("fontsize" "\\footnotesize"))))
+
 
 (set-popup-rule! "^\\*Org Agenda" :side 'bottom :size 0.90 :select t :ttl nil)
 (set-popup-rule! "^CAPTURE.*\\.org$" :side 'bottom :size 0.90 :select t :ttl nil)
@@ -309,6 +333,8 @@
 ;; (setq vc-handled-backends ())
 ;; }}
 
+;; Magit Hub Features
+(setq +magit-hub-features t)
 
 ;; {{ Solution 2: if NO network mounted drive involved
 (setq vc-handled-backends '(Git SVN Hg))
