@@ -157,9 +157,10 @@
        (org                ; organize your plain life in plain text
         +gnuplot
         +ipython
-        +pandoc
         +pretty
-        +present)
+        +pandoc
+        +present
+        +babel)
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional

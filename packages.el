@@ -35,8 +35,10 @@
 (package! decide)
 (package! rg)
 (package! topsy)
-(package! org)
 (package! lsp-pyright)
+(package! ob-json
+  :recipe (:host github :repo "sgpthomas/ob-json"))
+(package! auctex)
 
 
 

@@ -1,4 +1,5 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+;;(setq debug-on-error t)
 
 ;; User Informoation
 (setq user-full-name "Matheus (vorjdux) Santos"
@@ -156,6 +157,23 @@
 ;; (add-hook! 'org-mode-hook (company-mode -1))
 ;; (add-hook! 'org-capture-mode-hook (company-mode -1))
 
+
+;; SQL Formatter
+
+(after! sql
+  (setq sqlformat-command 'pgformatter
+        sqlformat-args '("--function-case" "1" "--keyword-case" "2")))
+
+(map! :map sql-mode-map
+      :localleader
+      :desc "Format SQL buffer" "f" #'sqlformat-buffer)
+
+
+(add-to-list 'auto-mode-alist '("\\.sql\\'" . sql-mode))
+
+
+;; Other things
+
 (setq baby-blue '("#d2ecff" "#d2ecff" "brightblue"))
 
 (setq
@@ -247,43 +265,42 @@
                       :background nil
                       :height 1.75
                       :weight 'bold)
-  (setq org-fancy-priorities-list '("⚡" "⬆" "⬇" "☕")))
+  (setq org-fancy-priorities-list '("⚡" "⬆" "⬇" "☕"))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((ditaa . t)
+     (dot . t)
+     (plantuml . t)
+     (json . t)
+     (emacs-lisp . t)
+     (python . t)))
+
+  ;; Set paths for PlantUML and ditaa
+  (setq org-plantuml-jar-path "/usr/local/share/plantuml/plantuml.jar"
+        org-ditaa-jar-path "/usr/local/share/ditaa/ditaa.jar")
+
+  ;; Automatically redisplay inline images after executing code blocks
+  (add-hook 'org-babel-after-execute-hook #'org-redisplay-inline-images)
+
+  ;; Disable confirmation for evaluating code blocks
+  (setq org-confirm-babel-evaluate nil)
+
+  ;; Configure LaTeX PDF process with shell-escape for SVGs
+  (setq org-latex-pdf-process
+        '("%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "%latex -shell-escape -interaction nonstopmode -output-directory %o %f")))
+
+;; Set background color for LaTeX previews
+(after! org
+  (plist-put org-format-latex-options :background "White"))
 
 (setq +magit-hub-features t)
 
 (set-popup-rule! "^\\*Org Agenda" :side 'bottom :size 0.90 :select t :ttl nil)
 (set-popup-rule! "^CAPTURE.*\\.org$" :side 'bottom :size 0.90 :select t :ttl nil)
 (set-popup-rule! "^\\*org-brain" :side 'right :size 1.00 :select t :ttl nil)
-
-(use-package org-mode
-  :init
-  ;; This allows PlantUML, Graphviz and ditaa diagrams
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((ditaa . t)
-     (dot . t)
-     (plantuml . t)))
-
-  :hook
-  (org-babel-after-execute . org-redisplay-inline-images)
-
-  :custom
-  (org-edit-src-content-indentation 0)
-  ;; PlantUML was too old on Debian Bookworm, so a recent copy is
-  ;; installed in /usr/local/share
-  (org-plantuml-jar-path "/usr/local/share/plantuml/plantuml.jar")
-  ;; ditaa installed through dpkg on Debian
-  (org-ditaa-jar-path "/usr/local/share/ditaa/ditaa.jar")
-  ;; Do not ask before evaluating a code block
-  (org-confirm-babel-evaluate nil)
-  ;; Fix for including SVGs
-  (org-latex-pdf-process
-   '("%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
-     "bibtex %b"
-     "%latex -shell-escape -interaction nonstopmode -output-directory %o %f"
-     "%latex -shell-escape -interaction nonstopmode -output-directory %o %f"))
-  )
-(plist-put org-format-latex-options :background "White")
 
 ;; git conf ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
