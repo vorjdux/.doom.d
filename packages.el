@@ -24,7 +24,7 @@
 (package! org-brain)
 (package! ascii-art-to-unicode)
 (package! wakatime-mode)
-(package! pretty-hydra)
+;; (package! pretty-hydra)
 (package! slack)
 (package! exwm)
 (package! blamer)
@@ -39,6 +39,7 @@
 (package! ob-json
   :recipe (:host github :repo "sgpthomas/ob-json"))
 (package! auctex)
+(package! exec-path-from-shell)
 
 
 
@@ -91,3 +92,18 @@
 
 (package! copilot
   :recipe (:host github :repo "zerolfx/copilot.el" :files ("*.el" "dist")))
+
+(package! inheritenv
+  :recipe (:host github :repo "purcell/inheritenv"))
+
+(package! eat :recipe (:host codeberg :repo "akib/emacs-eat"
+                       :files ("*.el" ("term" "term/*.el") "*.texi"
+                               "*.ti" ("terminfo/e" "terminfo/e/*")
+                               ("terminfo/65" "terminfo/65/*")
+                               ("integration" "integration/*")
+                               (:exclude ".dir-locals.el" "*-tests.el"))))
+
+(package! claude-code
+  :recipe (:host github :repo "stevemolitor/claude-code.el"
+           :branch "main" :depth 1
+           :files ("*.el" (:exclude "images/*"))))
